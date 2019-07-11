@@ -11,7 +11,7 @@
 # 1. 生成するオブジェクトのファイル名を指定（例：test.mot）
 TARGET = linetracer.mot
 # 2. 生成に必要なCのファイル名を空白で区切って並べる（例：test1.c test2.c）
-SOURCE_C = ad.c lcd.c random.c timer.c linetracer.c
+SOURCE_C = ad.c lcd.c random.c timer.c linetracer.c key.c
 # 3. 生成に必要なアセンブラのファイル名を空白で区切って並べる
 #	(スタートアップルーチンは除く)
 SOURCE_ASM = 

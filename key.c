@@ -1,4 +1,4 @@
-#include "h8-3052-iodef.h"
+#include "h8-3069-iodef.h"
 
 #define KEYBUFSIZE 10  /* キーバッファの大きさ */
 #define KEYCHKCOUNT 5  /* キーの連続状態を調べるバッファ上の長さ　 */
@@ -7,7 +7,7 @@
 #define KEYROWNUM  1   /* キー配列の列数(縦に並んでいる個数) */
 #define KEYCOLNUM  2   /* キー配列の行数(横に並んでいる個数) */
 #define KEYMINNUM  1   /* キー番号の最小値 */
-#define KEYMAXNUM 12   /* キー番号の最大値 */
+#define KEYMAXNUM  2   /* キー番号の最大値 */
 #define KEYNONE   -1   /* 指定したキーがない */
 #define KEYOFF     0   /* 指定したキーはずっと離されている状態 */
 #define KEYON      1   /* 指定したキーはずっと押されている状態 */

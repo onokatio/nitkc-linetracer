@@ -4,6 +4,7 @@
 #include "lcd.h"
 #include "ad.h"
 #include "timer.h"
+#include "key.h"
 
 /* タイマ割り込みの時間間隔[μs] */
 #define TIMER0 1000
@@ -16,9 +17,11 @@
 #define CONTROLTIME 10
 
 /* LED関係 */
-/* LEDがP9に接続されているビット位置 */
-#define REDLEDPOS   0x10
-#define GREENLEDPOS 0x20
+/* LEDがPBに接続されているビット位置 */
+#define LMOTOR_IN1   0x01
+#define LMOTOR_IN2   0x02
+#define RMOTOR_IN1   0x04
+#define RMOTOR_IN2   0x08
 
 /* LCD表示関連 */
 /* 1段に表示できる文字数 */
@@ -42,7 +45,7 @@
 volatile int disp_time, key_time, ad_time, pwm_time, control_time;
 
 /* LED関係 */
-unsigned char redval, greenval;
+unsigned char sensor_r, sensor_l;
 
 /* LCD関係 */
 volatile int disp_flag;
@@ -68,8 +71,8 @@ int main(void)
   /* 初期化 */
   ROMEMU();           /* ROMエミュレーションをON */
 
-  /* ここでLEDポート(P9)の初期化を行う */
-  P9DDR = 0x30;
+  /* ここでmoterポート(PB)の初期化を行う */
+  PBDDR = 0xff;
 
   /* 割り込みで使用する大域変数の初期化 */
   pwm_time = pwm_count = 0;     /* PWM制御関連 */
@@ -86,7 +89,7 @@ int main(void)
   timer_set(0,TIMER0); /* タイマ0の時間間隔をセット */
   timer_start(0);      /* タイマ0スタート */
   ENINT();             /* 全割り込み受付可 */
-  redval = greenval = 0; /* 赤・緑LEDの両方を消灯とする */
+  sensor_l = sensor_r = 0; /* 赤・緑LEDの両方を消灯とする */
 
   /* ここでLCDに表示する文字列を初期化しておく */
   lcd_clear();
@@ -98,26 +101,18 @@ int main(void)
 		disp_flag = 0;
 
   		lcd_cursor(0,0);
-		lcd_printch('R');
+		lcd_printch((sensor_r/100)%10 + '0');
   		lcd_cursor(1,0);
-		lcd_printch(':');
+		lcd_printch((sensor_r/10)%10 + '0');
   		lcd_cursor(2,0);
-		lcd_printch((redval/100)%10 + '0');
-  		lcd_cursor(3,0);
-		lcd_printch((redval/10)%10 + '0');
-  		lcd_cursor(4,0);
-		lcd_printch('0' + redval%10);
+		lcd_printch('0' + sensor_r%10);
 
-  		lcd_cursor(0,1);
-		lcd_printch('L');
-  		lcd_cursor(1,1);
-		lcd_printch(':');
-  		lcd_cursor(2,1);
-		lcd_printch((greenval/100)%10 + '0');
-  		lcd_cursor(3,1);
-		lcd_printch((greenval/10)%10 + '0');
-  		lcd_cursor(4,1);
-		lcd_printch('0' + greenval%10);
+  		lcd_cursor(5,0);
+		lcd_printch((sensor_l/100)%10 + '0');
+  		lcd_cursor(6,0);
+		lcd_printch((sensor_l/10)%10 + '0');
+  		lcd_cursor(7,0);
+		lcd_printch('0' + sensor_l%10);
 	  }
 
     /* その他の処理はタイマ割り込みによって自動的に実行されるため  */
@@ -238,20 +233,22 @@ void pwm_proc(void)
      /* この関数はタイマ割り込み0の割り込みハンドラから呼び出される */
 {
 	
-  //redval = 5;
-  //greenval = 2;
 
   /* ここにPWM制御の中身を書く */
-  if(pwm_count < redval){
-	P9DR &= ~REDLEDPOS;
+  if(pwm_count < sensor_r){
+	PBDR |= RMOTOR_IN1;
+	PBDR &= ~RMOTOR_IN2;
   }else{
-	P9DR |= REDLEDPOS;
+	PBDR &= ~RMOTOR_IN1;
+	PBDR &= ~RMOTOR_IN2;
   }
 
-  if(pwm_count < greenval){
-	P9DR &= ~GREENLEDPOS;
+  if(pwm_count < sensor_l){
+	PBDR |= LMOTOR_IN1;
+	PBDR &= ~LMOTOR_IN2;
   }else{
-	P9DR |= GREENLEDPOS;
+	PBDR &= ~LMOTOR_IN1;
+	PBDR &= ~LMOTOR_IN2;
   }
 
   pwm_count++;
@@ -268,33 +265,15 @@ void control_proc(void)
 {
 
   /* ここに制御処理を書く */
-	/*
+	
 	if(key_read(3) == KEYPOSEDGE){
-		greenval++;
-		if(greenval >= MAXPWMCOUNT){
-			greenval = MAXPWMCOUNT;
-		}
+		//greenval++;
 	}
 	if(key_read(6) == KEYPOSEDGE){
-		if(greenval != 0){
-			greenval--;
-		}
+		//greenval--;
 	}
 
-	if(key_read(2) == KEYPOSEDGE){
-		redval++;
-		if(redval >= MAXPWMCOUNT){
-			redval = MAXPWMCOUNT;
-		}
-	}
-	if(key_read(5) == KEYPOSEDGE){
-		if(redval != 0){
-			redval--;
-		}
-	}
-	*/
-
-	greenval = ad_read(1);
-	redval = ad_read(2);
+	sensor_l = ad_read(1)/2;
+	sensor_r = ad_read(2)/2;
 
 }
