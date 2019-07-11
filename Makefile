@@ -9,9 +9,9 @@
 
 # 生成するファイルとソースファイルの指定
 # 1. 生成するオブジェクトのファイル名を指定（例：test.mot）
-TARGET = 
+TARGET = linetracer.mot
 # 2. 生成に必要なCのファイル名を空白で区切って並べる（例：test1.c test2.c）
-SOURCE_C = 
+SOURCE_C = ad.c lcd.c random.c timer.c
 # 3. 生成に必要なアセンブラのファイル名を空白で区切って並べる
 #	(スタートアップルーチンは除く)
 SOURCE_ASM = 
@@ -71,10 +71,10 @@ endif
 #
 # 3. クロスコンパイラ関係
 #	デフォルト指定
-CC = $(CMD_PATH)/h8300-hms-gcc
-LD = $(CMD_PATH)/h8300-hms-ld
-OBJCOPY = $(CMD_PATH)/h8300-hms-objcopy
-SIZE = $(CMD_PATH)/h8300-hms-size
+CC = h8300-hms-gcc
+LD = h8300-hms-ld
+OBJCOPY = h8300-hms-objcopy
+SIZE = h8300-hms-size
 
 #
 # ターゲット指定
