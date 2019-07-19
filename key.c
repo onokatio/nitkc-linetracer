@@ -40,8 +40,8 @@ void key_init(void)
 {
   int i,j;
 
-  PADR = 0x0f;       /* PA0-3 は0アクティブ, PA4-6 は1アクティブ */
-  PADDR = 0x7f;      /* PA0-3 はキーボードマトリクスの出力用 */
+  //PADR = 0x0f;       /* PA0-3 は0アクティブ, PA4-6 は1アクティブ */
+  //PADDR = 0x7f;      /* PA0-3 はキーボードマトリクスの出力用 */
                      /* PA4-6 はLCD制御(E,R/W,RS)の出力用 */
   P6DDR = 0;         /* P60-2 はキーボードマトリクスの入力用 */
                      /* P63-6 はCPUのバス制御として固定(モード6の時) */
@@ -70,12 +70,7 @@ void key_sense(void)
   keybufdp++;
   if (keybufdp >= KEYBUFSIZE) keybufdp = 0;
   /* キースキャン */
-  for(row = 0; row < KEYROWNUM; row++){ /* 列ごとにスキャン */
-    r = ~(1 << row) & 0x0f;  /* スキャンする列のビットだけ 0 にする */
-    r = r | (PADR & 0x70);   /*  LCD の制御に影響しないための対策 */
-    PADR = r;                /*  キーデータの読み込み (0:ON, 1:OFF) */
-    keybuf[keybufdp][row] = P6DR & 0x07; /* キーバッファに格納 */
-  }
+    keybuf[keybufdp][0] = P6DR & 0x03; /* キーバッファに格納 */
 }
 
 int key_check(int keynum)
@@ -104,7 +99,7 @@ int key_check(int keynum)
     for (i = 0; i < KEYCHKCOUNT; i++){
       dp = kbdp - i;
       if (dp < 0) dp = dp + KEYBUFSIZE; /* キーバッファポインタの範囲チェック */
-      keydata = keybuf[dp][row];        /* バッファからデータを取り出す */
+      keydata = keybuf[dp][0];        /* バッファからデータを取り出す */
       /* バッファから状態を調べる (キーは押されると 0 になることに注意) */
       if ((keydata & bitmask) != 0) count_swoff++;  /* 押されていない */
       else count_swon++;                            /* 押されている   */

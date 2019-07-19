@@ -59,6 +59,15 @@ volatile int pwm_count;
 volatile unsigned char adbuf[ADCHNUM][ADBUFSIZE];
 volatile int adbufdp;
 
+#define STATE_WAIT_BLACK  0
+#define STATE_WAIT_WHITE  1
+#define STATE_LINETRACE   2
+
+volatile int global_state;
+
+volatile int motorspeed_r;
+volatile int motorspeed_l;
+
 int main(void);
 void int_imia0(void);
 void int_adi(void);
@@ -90,6 +99,11 @@ int main(void)
   timer_start(0);      /* タイマ0スタート */
   ENINT();             /* 全割り込み受付可 */
   sensor_l = sensor_r = 0; /* 赤・緑LEDの両方を消灯とする */
+  global_state = STATE_WAIT_BLACK;
+  motorspeed_r = 0;
+  motorspeed_l = 0;
+  int hex_lower;
+  int hex_upper;
 
   /* ここでLCDに表示する文字列を初期化しておく */
   lcd_clear();
@@ -101,18 +115,73 @@ int main(void)
 		disp_flag = 0;
 
   		lcd_cursor(0,0);
-		lcd_printch((sensor_r/100)%10 + '0');
+		lcd_printch('ｾ');
   		lcd_cursor(1,0);
-		lcd_printch((sensor_r/10)%10 + '0');
+		lcd_printch(0xdd);
   		lcd_cursor(2,0);
-		lcd_printch('0' + sensor_r%10);
+		lcd_printch('ｻ');
 
-  		lcd_cursor(5,0);
-		lcd_printch((sensor_l/100)%10 + '0');
+  		lcd_cursor(3,0);
+
+		hex_upper = (sensor_r/16)%16;
+		if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
+		else lcd_printch(hex_upper + '0');
+
+  		lcd_cursor(4,0);
+
+		hex_lower = sensor_r%16;
+		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
+		else lcd_printch(hex_lower + '0');
+
   		lcd_cursor(6,0);
-		lcd_printch((sensor_l/10)%10 + '0');
+
+		hex_upper = (sensor_l/16)%16;
+		if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
+		else lcd_printch(hex_upper + '0');
+
   		lcd_cursor(7,0);
-		lcd_printch('0' + sensor_l%10);
+
+		hex_lower = sensor_l%16;
+		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
+		else lcd_printch(hex_lower + '0');
+
+
+  		lcd_cursor(0,1);
+		lcd_printch(0xca); // ha
+  		lcd_cursor(1,1);
+		lcd_printch(0xd4); // ya
+  		lcd_cursor(2,1);
+		lcd_printch('ｻ');
+
+  		lcd_cursor(3,1);
+
+		hex_upper = (motorspeed_r/16)%16;
+		if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
+		else lcd_printch(hex_upper + '0');
+
+  		lcd_cursor(4,1);
+
+		hex_lower = motorspeed_r%16;
+		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
+		else lcd_printch(hex_lower + '0');
+
+  		lcd_cursor(6,1);
+		lcd_printch(key_read(1) + '0');
+  		lcd_cursor(7,1);
+		lcd_printch(key_check(1) + '0');
+		/*
+  		lcd_cursor(6,1);
+
+		hex_upper = (P6DR/16)%16;
+		if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
+		else lcd_printch(hex_upper + '0');
+
+  		lcd_cursor(7,1);
+
+		hex_lower = P6DR%16;
+		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
+		else lcd_printch(hex_lower + '0');
+		*/
 	  }
 
     /* その他の処理はタイマ割り込みによって自動的に実行されるため  */
@@ -235,7 +304,7 @@ void pwm_proc(void)
 	
 
   /* ここにPWM制御の中身を書く */
-  if(pwm_count < sensor_r){
+  if(pwm_count < motorspeed_r ){
 	PBDR |= RMOTOR_IN1;
 	PBDR &= ~RMOTOR_IN2;
   }else{
@@ -243,7 +312,7 @@ void pwm_proc(void)
 	PBDR &= ~RMOTOR_IN2;
   }
 
-  if(pwm_count < sensor_l){
+  if(pwm_count < motorspeed_l){
 	PBDR |= LMOTOR_IN1;
 	PBDR &= ~LMOTOR_IN2;
   }else{
@@ -266,14 +335,21 @@ void control_proc(void)
 
   /* ここに制御処理を書く */
 	
-	if(key_read(3) == KEYPOSEDGE){
-		//greenval++;
-	}
-	if(key_read(6) == KEYPOSEDGE){
-		//greenval--;
-	}
-
 	sensor_l = ad_read(1)/2;
 	sensor_r = ad_read(2)/2;
+
+	if(global_state == STATE_WAIT_BLACK){
+		if(key_read(1) == KEYPOSEDGE){
+			global_state = STATE_WAIT_WHITE;
+		}
+	}else if(global_state == STATE_WAIT_WHITE){
+		if(key_read(1) == KEYPOSEDGE){
+			global_state = STATE_LINETRACE;
+		}
+	}else{
+		motorspeed_r = sensor_r;
+		motorspeed_l = sensor_l;
+	}
+
 
 }
