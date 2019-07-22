@@ -14,7 +14,7 @@
 #define KEYTIME 1
 #define ADTIME  2
 #define PWMTIME 1
-#define CONTROLTIME 10
+#define CONTROLTIME 1
 
 /* LED関係 */
 /* LEDがPBに接続されているビット位置 */
@@ -389,7 +389,7 @@ void control_proc(void)
 		}
 		sensor_limit_1 = (sensor_r + sensor_l)/2;
 	}else if(global_state == STATE_WAIT_WHITE){
-		if(key_read(1) == KEYPOSEDGE){
+		if(key_read(2) == KEYPOSEDGE){
 			global_state = STATE_LINETRACE;
 		}
 		sensor_limit_2 = (sensor_r + sensor_l)/2;
@@ -418,20 +418,28 @@ void control_proc(void)
 			motorspeed_l = 255;
 		}else if(sensor_state_r == SENSOR_WHITE && sensor_state_l == SENSOR_BLACK){
 			motorspeed_r = 255;
-			motorspeed_l = 0;
+			motorspeed_l = 128;
 		}else if(sensor_state_r == SENSOR_BLACK && sensor_state_l == SENSOR_WHITE){
-			motorspeed_r = 0;
+			motorspeed_r = 128;
 			motorspeed_l = 255;
 		}else if(sensor_state_r == SENSOR_BLACK && sensor_state_l == SENSOR_BLACK){
 			if(sensor_state_r_old == SENSOR_WHITE && sensor_state_l_old == SENSOR_BLACK){
-				motorspeed_r = 255;
-				motorspeed_l = 0;
+				motorspeed_r = 128;
+				motorspeed_l = 255;
+
+				sensor_state_l = sensor_state_l_old;
+				sensor_state_r = sensor_state_r_old;
+
 			}else if(sensor_state_r_old == SENSOR_BLACK && sensor_state_l_old == SENSOR_WHITE){
-				motorspeed_r = 0;
-				motorspeed_l = 255;
-			}else if(sensor_state_r_old == SENSOR_BLACK && sensor_state_l_old == SENSOR_BLACK){
 				motorspeed_r = 255;
-				motorspeed_l = 255;
+				motorspeed_l = 128;
+
+				sensor_state_l = sensor_state_l_old;
+				sensor_state_r = sensor_state_r_old;
+
+			}else if(sensor_state_r_old == SENSOR_BLACK && sensor_state_l_old == SENSOR_BLACK){
+				motorspeed_r = 0;
+				motorspeed_l = 0;
 			}
 		}
 
