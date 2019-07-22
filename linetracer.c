@@ -113,13 +113,14 @@ int main(void)
     /* ここで disp_flag によってLCDの表示を更新する */
 	  if(disp_flag){
 		disp_flag = 0;
-
+/*
   		lcd_cursor(0,0);
 		lcd_printch('ｾ');
   		lcd_cursor(1,0);
 		lcd_printch(0xdd);
   		lcd_cursor(2,0);
 		lcd_printch('ｻ');
+*/
 
   		lcd_cursor(3,0);
 
@@ -166,22 +167,16 @@ int main(void)
 		else lcd_printch(hex_lower + '0');
 
   		lcd_cursor(6,1);
-		lcd_printch(key_read(1) + '0');
-  		lcd_cursor(7,1);
-		lcd_printch(key_check(1) + '0');
-		/*
-  		lcd_cursor(6,1);
 
-		hex_upper = (P6DR/16)%16;
+		hex_upper = (motorspeed_l/16)%16;
 		if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
 		else lcd_printch(hex_upper + '0');
 
   		lcd_cursor(7,1);
 
-		hex_lower = P6DR%16;
+		hex_lower = motorspeed_l%16;
 		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
 		else lcd_printch(hex_lower + '0');
-		*/
 	  }
 
     /* その他の処理はタイマ割り込みによって自動的に実行されるため  */
@@ -212,7 +207,7 @@ void int_imia0(void)
   key_time++;
   if (key_time >= KEYTIME){
     key_time = 0;
-	//key_sense();
+	key_sense();
   }
 
   /* ここにPWM処理に分岐するための処理を書く */
@@ -337,6 +332,9 @@ void control_proc(void)
 	
 	sensor_l = ad_read(1)/2;
 	sensor_r = ad_read(2)/2;
+
+  		lcd_cursor(0,0);
+		lcd_printch(global_state + '0');
 
 	if(global_state == STATE_WAIT_BLACK){
 		if(key_read(1) == KEYPOSEDGE){

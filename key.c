@@ -1,4 +1,5 @@
 #include "h8-3069-iodef.h"
+#include "lcd.h"
 
 #define KEYBUFSIZE 10  /* キーバッファの大きさ */
 #define KEYCHKCOUNT 5  /* キーの連続状態を調べるバッファ上の長さ　 */
@@ -101,8 +102,9 @@ int key_check(int keynum)
       if (dp < 0) dp = dp + KEYBUFSIZE; /* キーバッファポインタの範囲チェック */
       keydata = keybuf[dp][0];        /* バッファからデータを取り出す */
       /* バッファから状態を調べる (キーは押されると 0 になることに注意) */
-      if ((keydata & bitmask) != 0) count_swoff++;  /* 押されていない */
+      if ((keydata & (1 << (keynum-1)) ) != 0) count_swoff++;  /* 押されていない */
       else count_swon++;                            /* 押されている   */
+
     }
     /* キー状態の判別 */
     /* 全てキーがON(KEYON)かOFF(KEYOFF)か、それらでないか(KEYTRANS)で判別 */
