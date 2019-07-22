@@ -418,13 +418,13 @@ void control_proc(void)
 			motorspeed_l = 255;
 		}else if(sensor_state_r == SENSOR_WHITE && sensor_state_l == SENSOR_BLACK){
 			motorspeed_r = 255;
-			motorspeed_l = 128;
+			motorspeed_l = 32;
 		}else if(sensor_state_r == SENSOR_BLACK && sensor_state_l == SENSOR_WHITE){
-			motorspeed_r = 128;
+			motorspeed_r = 32;
 			motorspeed_l = 255;
 		}else if(sensor_state_r == SENSOR_BLACK && sensor_state_l == SENSOR_BLACK){
 			if(sensor_state_r_old == SENSOR_WHITE && sensor_state_l_old == SENSOR_BLACK){
-				motorspeed_r = 128;
+				motorspeed_r = 32;
 				motorspeed_l = 255;
 
 				sensor_state_l = sensor_state_l_old;
@@ -432,7 +432,7 @@ void control_proc(void)
 
 			}else if(sensor_state_r_old == SENSOR_BLACK && sensor_state_l_old == SENSOR_WHITE){
 				motorspeed_r = 255;
-				motorspeed_l = 128;
+				motorspeed_l = 32;
 
 				sensor_state_l = sensor_state_l_old;
 				sensor_state_r = sensor_state_r_old;
