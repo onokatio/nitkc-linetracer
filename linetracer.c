@@ -68,6 +68,13 @@ volatile int global_state;
 volatile int motorspeed_r;
 volatile int motorspeed_l;
 
+volatile int sensor_limit;
+
+volatile int sensor_state_r;
+volatile int sensor_state_l;
+volatile int sensor_state_r_old;
+volatile int sensor_state_l_old;
+
 int main(void);
 void int_imia0(void);
 void int_adi(void);
@@ -122,6 +129,24 @@ int main(void)
 		lcd_printch('ｻ');
 */
 
+  		lcd_cursor(1,0);
+
+		hex_lower = sensor_state_r; 
+		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
+		else lcd_printch(hex_lower + '0');
+
+  		lcd_cursor(2,1);
+
+		hex_lower = sensor_state_l; 
+		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
+		else lcd_printch(hex_lower + '0');
+
+  		lcd_cursor(2,0);
+
+		hex_lower = P6DR%16;
+		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
+		else lcd_printch(hex_lower + '0');
+
   		lcd_cursor(3,0);
 
 		hex_upper = (sensor_r/16)%16;
@@ -147,12 +172,26 @@ int main(void)
 		else lcd_printch(hex_lower + '0');
 
 
+		/*
   		lcd_cursor(0,1);
 		lcd_printch(0xca); // ha
   		lcd_cursor(1,1);
 		lcd_printch(0xd4); // ya
   		lcd_cursor(2,1);
-		lcd_printch('ｻ');
+		lcd_printch(0xbb);
+		*/
+
+  		lcd_cursor(0,1);
+
+		hex_upper = (sensor_limit/16)%16;
+		if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
+		else lcd_printch(hex_upper + '0');
+
+  		lcd_cursor(1,1);
+
+		hex_lower = sensor_limit%16;
+		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
+		else lcd_printch(hex_lower + '0');
 
   		lcd_cursor(3,1);
 
@@ -323,10 +362,18 @@ void pwm_proc(void)
 
 }
 
+#define SENSOR_BLACK 0
+#define SENSOR_WHITE 1
+
+
 void control_proc(void)
      /* 制御を行う関数                                           */
      /* この関数はタイマ割り込み0の割り込みハンドラから呼び出される */
 {
+
+	volatile static int sensor_limit_1;
+	volatile static int sensor_limit_2;
+
 
   /* ここに制御処理を書く */
 	
@@ -340,13 +387,54 @@ void control_proc(void)
 		if(key_read(1) == KEYPOSEDGE){
 			global_state = STATE_WAIT_WHITE;
 		}
+		sensor_limit_1 = (sensor_r + sensor_l)/2;
 	}else if(global_state == STATE_WAIT_WHITE){
 		if(key_read(1) == KEYPOSEDGE){
 			global_state = STATE_LINETRACE;
 		}
+		sensor_limit_2 = (sensor_r + sensor_l)/2;
+		sensor_limit = (sensor_limit_1 + sensor_limit_2)/2;
 	}else{
-		motorspeed_r = sensor_r;
-		motorspeed_l = sensor_l;
+		//motorspeed_r = sensor_r;
+		//motorspeed_l = sensor_l;
+
+		sensor_state_l_old = sensor_state_l;
+		sensor_state_r_old = sensor_state_r;
+
+		if(sensor_r > sensor_limit){
+			sensor_state_r = SENSOR_BLACK;
+		}else{
+			sensor_state_r = SENSOR_WHITE;
+		}
+
+		if(sensor_l > sensor_limit){
+			sensor_state_l = SENSOR_BLACK;
+		}else{
+			sensor_state_l = SENSOR_WHITE;
+		}
+
+		if(sensor_state_r == SENSOR_WHITE && sensor_state_l == SENSOR_WHITE ){
+			motorspeed_r = 255;
+			motorspeed_l = 255;
+		}else if(sensor_state_r == SENSOR_WHITE && sensor_state_l == SENSOR_BLACK){
+			motorspeed_r = 255;
+			motorspeed_l = 0;
+		}else if(sensor_state_r == SENSOR_BLACK && sensor_state_l == SENSOR_WHITE){
+			motorspeed_r = 0;
+			motorspeed_l = 255;
+		}else if(sensor_state_r == SENSOR_BLACK && sensor_state_l == SENSOR_BLACK){
+			if(sensor_state_r_old == SENSOR_WHITE && sensor_state_l_old == SENSOR_BLACK){
+				motorspeed_r = 255;
+				motorspeed_l = 0;
+			}else if(sensor_state_r_old == SENSOR_BLACK && sensor_state_l_old == SENSOR_WHITE){
+				motorspeed_r = 0;
+				motorspeed_l = 255;
+			}else if(sensor_state_r_old == SENSOR_BLACK && sensor_state_l_old == SENSOR_BLACK){
+				motorspeed_r = 255;
+				motorspeed_l = 255;
+			}
+		}
+
 	}
 
 
