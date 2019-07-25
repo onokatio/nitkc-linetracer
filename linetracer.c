@@ -433,7 +433,7 @@ void control_proc(void)
 
 			spent++;
 
-			motorspeed_r = 255-(spent/10);
+			motorspeed_r = 255-(spent);
 			motorspeed_l = 255;
 
 			if(motorspeed_r < 0) motorspeed_r = 0;
@@ -442,7 +442,7 @@ void control_proc(void)
 			spent++;
 
 			motorspeed_r = 255;
-			motorspeed_l = 255-(spent/10);
+			motorspeed_l = 255-(spent);
 
 			if(motorspeed_l < 0) motorspeed_l = 0;
 
@@ -451,7 +451,7 @@ void control_proc(void)
 
 				spent++;
 
-				motorspeed_r = 255-(spent/10);
+				motorspeed_r = 255-(spent);
 				motorspeed_l = 255;
 
 				sensor_state_l = sensor_state_l_old;
@@ -461,7 +461,7 @@ void control_proc(void)
 
 				spent++;
 				motorspeed_r = 255;
-				motorspeed_l = 255-(spent/10);
+				motorspeed_l = 255-(spent);
 
 				sensor_state_l = sensor_state_l_old;
 				sensor_state_r = sensor_state_r_old;
