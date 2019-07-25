@@ -59,21 +59,19 @@ volatile int pwm_count;
 volatile unsigned char adbuf[ADCHNUM][ADBUFSIZE];
 volatile int adbufdp;
 
-#define STATE_WAIT_BLACK  0
-#define STATE_WAIT_WHITE  1
-#define STATE_LINETRACE   2
-
 volatile int global_state;
 
 volatile int motorspeed_r;
 volatile int motorspeed_l;
 
+#define STATE_WAIT_BLACK  0
+#define STATE_WAIT_WHITE  1
+#define STATE_LINETRACE   2
+
 volatile int sensor_limit;
 
 volatile int sensor_state_r;
 volatile int sensor_state_l;
-volatile int sensor_state_r_old;
-volatile int sensor_state_l_old;
 
 int main(void);
 void int_imia0(void);
@@ -366,6 +364,17 @@ void pwm_proc(void)
 #define SENSOR_WHITE 1
 
 
+
+
+volatile int sensor_state_r_old;
+volatile int sensor_state_l_old;
+
+volatile int target;
+
+volatile int sum;
+
+volatile int spent;
+
 void control_proc(void)
      /* 制御を行う関数                                           */
      /* この関数はタイマ割り込み0の割り込みハンドラから呼び出される */
@@ -394,6 +403,7 @@ void control_proc(void)
 		}
 		sensor_limit_2 = (sensor_r + sensor_l)/2;
 		sensor_limit = (sensor_limit_1 + sensor_limit_2)/2;
+		target = (sensor_limit + sensor_limit_2)/2;
 	}else{
 		//motorspeed_r = sensor_r;
 		//motorspeed_l = sensor_l;
@@ -416,30 +426,49 @@ void control_proc(void)
 		if(sensor_state_r == SENSOR_WHITE && sensor_state_l == SENSOR_WHITE ){
 			motorspeed_r = 255;
 			motorspeed_l = 255;
+
+			spent=0;
+
 		}else if(sensor_state_r == SENSOR_WHITE && sensor_state_l == SENSOR_BLACK){
-			motorspeed_r = 255;
-			motorspeed_l = 32;
-		}else if(sensor_state_r == SENSOR_BLACK && sensor_state_l == SENSOR_WHITE){
-			motorspeed_r = 32;
+
+			spent++;
+
+			motorspeed_r = 255-(spent/10);
 			motorspeed_l = 255;
+
+			if(motorspeed_r < 0) motorspeed_r = 0;
+		}else if(sensor_state_r == SENSOR_BLACK && sensor_state_l == SENSOR_WHITE){
+
+			spent++;
+
+			motorspeed_r = 255;
+			motorspeed_l = 255-(spent/10);
+
+			if(motorspeed_l < 0) motorspeed_l = 0;
+
 		}else if(sensor_state_r == SENSOR_BLACK && sensor_state_l == SENSOR_BLACK){
 			if(sensor_state_r_old == SENSOR_WHITE && sensor_state_l_old == SENSOR_BLACK){
-				motorspeed_r = 32;
+
+				spent++;
+
+				motorspeed_r = 255-(spent/10);
 				motorspeed_l = 255;
 
 				sensor_state_l = sensor_state_l_old;
 				sensor_state_r = sensor_state_r_old;
 
 			}else if(sensor_state_r_old == SENSOR_BLACK && sensor_state_l_old == SENSOR_WHITE){
+
+				spent++;
 				motorspeed_r = 255;
-				motorspeed_l = 32;
+				motorspeed_l = 255-(spent/10);
 
 				sensor_state_l = sensor_state_l_old;
 				sensor_state_r = sensor_state_r_old;
 
 			}else if(sensor_state_r_old == SENSOR_BLACK && sensor_state_l_old == SENSOR_BLACK){
-				motorspeed_r = 0;
-				motorspeed_l = 0;
+				motorspeed_r = 255;
+				motorspeed_l = 255;
 			}
 		}
 
