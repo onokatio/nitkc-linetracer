@@ -42,6 +42,8 @@
 
 #define SENSOR_BUFFER_SIZE 10
 
+#define MOTOR_MAXSPEED 128
+
 /* 割り込み処理に必要な変数は大域変数にとる */
 volatile int disp_time, key_time, ad_time, pwm_time, control_time;
 
@@ -74,8 +76,8 @@ volatile int motorspeed_l;
 
 volatile int sensor_limit;
 
-volatile int sensor_state_r;
-volatile int sensor_state_l;
+//volatile int sensor_state_r;
+//volatile int sensor_state_l;
 
 int main(void);
 void int_imia0(void);
@@ -137,6 +139,7 @@ int main(void)
 		lcd_printch('ｻ');
 */
 
+		/*
   		lcd_cursor(1,0);
 
 		hex_lower = sensor_state_r; 
@@ -148,6 +151,7 @@ int main(void)
 		hex_lower = sensor_state_l; 
 		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
 		else lcd_printch(hex_lower + '0');
+		*/
 
   		lcd_cursor(2,0);
 
@@ -376,9 +380,6 @@ void pwm_proc(void)
 
 
 
-volatile int sensor_state_r_old;
-volatile int sensor_state_l_old;
-
 volatile int target;
 
 volatile int sum;
@@ -393,9 +394,14 @@ void control_proc(void)
 	volatile static int sensor_limit_1;
 	volatile static int sensor_limit_2;
 
+	volatile static char sensor_state_r[SENSOR_BUFFER_SIZE];
+	volatile static int sensor_state_r_dp = 0;
+	volatile static char sensor_state_l[SENSOR_BUFFER_SIZE];
+	volatile static int sensor_state_l_dp = 0;
 
-	int kp = 3;
+	int kp = 1;
 
+	int lastline;
 
   /* ここに制御処理を書く */
 	
@@ -424,75 +430,91 @@ void control_proc(void)
 		sensor_limit = (sensor_limit_1 + sensor_limit_2)/2;
 		target = (sensor_limit + sensor_limit_2)/2;
 	}else{
-		//motorspeed_r = sensor_r;
-		//motorspeed_l = sensor_l;
 
-		sensor_state_l_old = sensor_state_l;
-		sensor_state_r_old = sensor_state_r;
+		sensor_state_r_dp++;
+		sensor_state_l_dp++;
+
+		sensor_state_r_dp %= SENSOR_BUFFER_SIZE;
+		sensor_state_l_dp %= SENSOR_BUFFER_SIZE;
 
 		if(sensor_r[sensor_r_dp] > sensor_limit){
-			sensor_state_r = SENSOR_BLACK;
+			sensor_state_r[sensor_state_r_dp] = SENSOR_BLACK;
 		}else{
-			sensor_state_r = SENSOR_WHITE;
+			sensor_state_r[sensor_state_r_dp] = SENSOR_WHITE;
 		}
 
 		if(sensor_l[sensor_l_dp] > sensor_limit){
-			sensor_state_l = SENSOR_BLACK;
+			sensor_state_l[sensor_state_l_dp] = SENSOR_BLACK;
 		}else{
-			sensor_state_l = SENSOR_WHITE;
+			sensor_state_l[sensor_state_l_dp] = SENSOR_WHITE;
 		}
 
-		if(sensor_state_r == SENSOR_WHITE && sensor_state_l == SENSOR_WHITE ){
-			motorspeed_r = 255;
-			motorspeed_l = 255;
+		if(sensor_state_r[sensor_state_r_dp] == SENSOR_WHITE && sensor_state_l[sensor_state_l_dp] == SENSOR_WHITE ){
+			motorspeed_r = MOTOR_MAXSPEED;
+			motorspeed_l = MOTOR_MAXSPEED;
 
 			spent=0;
 
-		}else if(sensor_state_r == SENSOR_WHITE && sensor_state_l == SENSOR_BLACK){
+		}else if(sensor_state_r[sensor_state_r_dp] == SENSOR_WHITE && sensor_state_l[sensor_state_l_dp] == SENSOR_BLACK){
 
 			spent++;
 
-			motorspeed_r = 255-(spent*kp);
-			motorspeed_l = 255;
+			motorspeed_r = MOTOR_MAXSPEED-(spent*kp);
+			motorspeed_l = MOTOR_MAXSPEED;
 
 			if(motorspeed_r < 0) motorspeed_r = 0;
-		}else if(sensor_state_r == SENSOR_BLACK && sensor_state_l == SENSOR_WHITE){
+		}else if(sensor_state_r[sensor_state_r_dp] == SENSOR_BLACK && sensor_state_l[sensor_state_l_dp] == SENSOR_WHITE){
 
 			spent++;
 
-			motorspeed_r = 255;
-			motorspeed_l = 255-(spent*kp);
+			motorspeed_r = MOTOR_MAXSPEED;
+			motorspeed_l = MOTOR_MAXSPEED-(spent*kp);
 
 			if(motorspeed_l < 0) motorspeed_l = 0;
 
-		}else if(sensor_state_r == SENSOR_BLACK && sensor_state_l == SENSOR_BLACK){
-			if(sensor_state_r_old == SENSOR_WHITE && sensor_state_l_old == SENSOR_BLACK){
+		}else if(sensor_state_r[sensor_state_r_dp] == SENSOR_BLACK && sensor_state_l[sensor_state_l_dp] == SENSOR_BLACK){
+			int i;
+			int dp;
+			int whitecount = 0;
+			for(i=0; i < 5 ; i++){
+				dp=sensor_r_dp - i;
+				if(dp < 0) dp += SENSOR_BUFFER_SIZE;
+
+				//if(sensor_state_r[dp] == WHITE) whitecount++;
+			}
+			sensor_state_r_dp-1;
+			if(sensor_state_r[sensor_state_r_dp-1] == SENSOR_WHITE && sensor_state_l[sensor_state_l_dp-1] == SENSOR_BLACK){
 
 				spent++;
 
-				motorspeed_r = 255-(spent*kp);
-				motorspeed_l = 255;
+				motorspeed_r = MOTOR_MAXSPEED-(spent*kp);
+				motorspeed_l = MOTOR_MAXSPEED;
 
-				sensor_state_l = sensor_state_l_old;
-				sensor_state_r = sensor_state_r_old;
+				//sensor_state_l = sensor_state_l_old;
+				//sensor_state_r = sensor_state_r_old;
+				sensor_state_r[sensor_state_r_dp] = sensor_state_r[sensor_state_r_dp-1];
+				sensor_state_l[sensor_state_l_dp] = sensor_state_l[sensor_state_l_dp-1];
 
-			}else if(sensor_state_r_old == SENSOR_BLACK && sensor_state_l_old == SENSOR_WHITE){
+
+			}else if(sensor_state_r[sensor_state_r_dp-1] == SENSOR_BLACK && sensor_state_l[sensor_state_l_dp-1] == SENSOR_WHITE){
 
 				spent++;
-				motorspeed_r = 255;
-				motorspeed_l = 255-(spent*kp);
+				motorspeed_r = MOTOR_MAXSPEED;
+				motorspeed_l = MOTOR_MAXSPEED-(spent*kp);
 
-				sensor_state_l = sensor_state_l_old;
-				sensor_state_r = sensor_state_r_old;
+				//sensor_state_l = sensor_state_l_old;
+				//sensor_state_r = sensor_state_r_old;
+				sensor_state_r[sensor_state_r_dp] = sensor_state_r[sensor_state_r_dp-1];
+				sensor_state_l[sensor_state_l_dp] = sensor_state_l[sensor_state_l_dp-1];
 
-			}else if(sensor_state_r_old == SENSOR_BLACK && sensor_state_l_old == SENSOR_BLACK){
+			}else if(sensor_state_r[sensor_state_r_dp-1] == SENSOR_BLACK && sensor_state_l[sensor_state_l_dp-1] == SENSOR_BLACK){
 
-				motorspeed_r = 255;
-				motorspeed_l = 255;
+				motorspeed_r = 0;
+				motorspeed_l = 0;
 
-			}else if(sensor_state_r_old == SENSOR_WHITE && sensor_state_l_old == SENSOR_WHITE){
-				motorspeed_r = 255;
-				motorspeed_l = 255;
+			}else if(sensor_state_r[sensor_state_r_dp-1] == SENSOR_WHITE && sensor_state_l[sensor_state_l_dp-1] == SENSOR_WHITE){
+				motorspeed_r = 0;
+				motorspeed_l = 0;
 			}
 		}
 
