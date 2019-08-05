@@ -40,14 +40,15 @@
 /* チャネル指定エラー時に返す値 */
 #define ADCHNONE -1
 
+#define SENSOR_BUFFER_SIZE 10
 
 /* 割り込み処理に必要な変数は大域変数にとる */
 volatile int disp_time, key_time, ad_time, pwm_time, control_time;
 
 /* LED関係 */
-volatile static char sensor_r[10];
+volatile static char sensor_r[SENSOR_BUFFER_SIZE];
 volatile static int sensor_r_dp = 0;
-volatile static char sensor_l[10];
+volatile static char sensor_l[SENSOR_BUFFER_SIZE];
 volatile static int sensor_l_dp = 0;
 
 /* LCD関係 */
@@ -109,8 +110,9 @@ int main(void)
   global_state = STATE_WAIT_BLACK;
   motorspeed_r = 0;
   motorspeed_l = 0;
+  int i;
 
-  for(int i = 0; i < 10 ; i++){
+  for(i = 0; i < SENSOR_BUFFER_SIZE ; i++){
 	  sensor_r[i] = 0;
 	  sensor_l[i] = 0;
   }
@@ -397,6 +399,12 @@ void control_proc(void)
 
   /* ここに制御処理を書く */
 	
+	sensor_r_dp++;
+	sensor_l_dp++;
+
+	sensor_r_dp %= SENSOR_BUFFER_SIZE;
+	sensor_l_dp %= SENSOR_BUFFER_SIZE;
+
 	sensor_l[sensor_l_dp] = ad_read(1)/2;
 	sensor_r[sensor_r_dp] = ad_read(2)/2;
 
