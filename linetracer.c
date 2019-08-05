@@ -45,7 +45,10 @@
 volatile int disp_time, key_time, ad_time, pwm_time, control_time;
 
 /* LED関係 */
-unsigned char sensor_r, sensor_l;
+volatile static char sensor_r[10];
+volatile static int sensor_r_dp = 0;
+volatile static char sensor_l[10];
+volatile static int sensor_l_dp = 0;
 
 /* LCD関係 */
 volatile int disp_flag;
@@ -103,10 +106,15 @@ int main(void)
   timer_set(0,TIMER0); /* タイマ0の時間間隔をセット */
   timer_start(0);      /* タイマ0スタート */
   ENINT();             /* 全割り込み受付可 */
-  sensor_l = sensor_r = 0; /* 赤・緑LEDの両方を消灯とする */
   global_state = STATE_WAIT_BLACK;
   motorspeed_r = 0;
   motorspeed_l = 0;
+
+  for(int i = 0; i < 10 ; i++){
+	  sensor_r[i] = 0;
+	  sensor_l[i] = 0;
+  }
+
   int hex_lower;
   int hex_upper;
 
@@ -147,25 +155,25 @@ int main(void)
 
   		lcd_cursor(3,0);
 
-		hex_upper = (sensor_r/16)%16;
+		hex_upper = (sensor_r[sensor_r_dp]/16)%16;
 		if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
 		else lcd_printch(hex_upper + '0');
 
   		lcd_cursor(4,0);
 
-		hex_lower = sensor_r%16;
+		hex_lower = sensor_r[sensor_r_dp]%16;
 		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
 		else lcd_printch(hex_lower + '0');
 
   		lcd_cursor(6,0);
 
-		hex_upper = (sensor_l/16)%16;
+		hex_upper = (sensor_l[sensor_l_dp]/16)%16;
 		if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
 		else lcd_printch(hex_upper + '0');
 
   		lcd_cursor(7,0);
 
-		hex_lower = sensor_l%16;
+		hex_lower = sensor_l[sensor_l_dp]%16;
 		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
 		else lcd_printch(hex_lower + '0');
 
@@ -384,10 +392,13 @@ void control_proc(void)
 	volatile static int sensor_limit_2;
 
 
+	int kp = 3;
+
+
   /* ここに制御処理を書く */
 	
-	sensor_l = ad_read(1)/2;
-	sensor_r = ad_read(2)/2;
+	sensor_l[sensor_l_dp] = ad_read(1)/2;
+	sensor_r[sensor_r_dp] = ad_read(2)/2;
 
   		lcd_cursor(0,0);
 		lcd_printch(global_state + '0');
@@ -396,12 +407,12 @@ void control_proc(void)
 		if(key_read(1) == KEYPOSEDGE){
 			global_state = STATE_WAIT_WHITE;
 		}
-		sensor_limit_1 = (sensor_r + sensor_l)/2;
+		sensor_limit_1 = (sensor_r[sensor_r_dp] + sensor_l[sensor_l_dp])/2;
 	}else if(global_state == STATE_WAIT_WHITE){
 		if(key_read(2) == KEYPOSEDGE){
 			global_state = STATE_LINETRACE;
 		}
-		sensor_limit_2 = (sensor_r + sensor_l)/2;
+		sensor_limit_2 = (sensor_r[sensor_r_dp] + sensor_l[sensor_l_dp])/2;
 		sensor_limit = (sensor_limit_1 + sensor_limit_2)/2;
 		target = (sensor_limit + sensor_limit_2)/2;
 	}else{
@@ -411,13 +422,13 @@ void control_proc(void)
 		sensor_state_l_old = sensor_state_l;
 		sensor_state_r_old = sensor_state_r;
 
-		if(sensor_r > sensor_limit){
+		if(sensor_r[sensor_r_dp] > sensor_limit){
 			sensor_state_r = SENSOR_BLACK;
 		}else{
 			sensor_state_r = SENSOR_WHITE;
 		}
 
-		if(sensor_l > sensor_limit){
+		if(sensor_l[sensor_l_dp] > sensor_limit){
 			sensor_state_l = SENSOR_BLACK;
 		}else{
 			sensor_state_l = SENSOR_WHITE;
@@ -433,7 +444,7 @@ void control_proc(void)
 
 			spent++;
 
-			motorspeed_r = 255-(spent);
+			motorspeed_r = 255-(spent*kp);
 			motorspeed_l = 255;
 
 			if(motorspeed_r < 0) motorspeed_r = 0;
@@ -442,7 +453,7 @@ void control_proc(void)
 			spent++;
 
 			motorspeed_r = 255;
-			motorspeed_l = 255-(spent);
+			motorspeed_l = 255-(spent*kp);
 
 			if(motorspeed_l < 0) motorspeed_l = 0;
 
@@ -451,7 +462,7 @@ void control_proc(void)
 
 				spent++;
 
-				motorspeed_r = 255-(spent);
+				motorspeed_r = 255-(spent*kp);
 				motorspeed_l = 255;
 
 				sensor_state_l = sensor_state_l_old;
@@ -461,12 +472,17 @@ void control_proc(void)
 
 				spent++;
 				motorspeed_r = 255;
-				motorspeed_l = 255-(spent);
+				motorspeed_l = 255-(spent*kp);
 
 				sensor_state_l = sensor_state_l_old;
 				sensor_state_r = sensor_state_r_old;
 
 			}else if(sensor_state_r_old == SENSOR_BLACK && sensor_state_l_old == SENSOR_BLACK){
+
+				motorspeed_r = 255;
+				motorspeed_l = 255;
+
+			}else if(sensor_state_r_old == SENSOR_WHITE && sensor_state_l_old == SENSOR_WHITE){
 				motorspeed_r = 255;
 				motorspeed_l = 255;
 			}
