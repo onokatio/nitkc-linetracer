@@ -12,7 +12,7 @@
 /* 割り込み処理で各処理を行う頻度を決める定数 */
 #define DISPTIME 100
 #define KEYTIME 1
-#define ADTIME  2
+#define ADTIME  1
 #define PWMTIME 1
 #define CONTROLTIME 1
 
@@ -42,7 +42,11 @@
 
 #define SENSOR_BUFFER_SIZE 10
 
-#define MOTOR_MAXSPEED 128
+#define MOTOR_MAXSPEED 255
+
+#define JUMPMODE_JUMP      0
+#define JUMPMODE_TURNRIGHT 1
+#define JUMPMODE_TURNLEFT  2
 
 /* 割り込み処理に必要な変数は大域変数にとる */
 volatile int disp_time, key_time, ad_time, pwm_time, control_time;
@@ -69,6 +73,8 @@ volatile int global_state;
 
 volatile int motorspeed_r;
 volatile int motorspeed_l;
+volatile int motordirection_r;
+volatile int motordirection_l;
 
 #define STATE_WAIT_BLACK  0
 #define STATE_WAIT_WHITE  1
@@ -78,6 +84,8 @@ volatile int sensor_limit;
 
 //volatile int sensor_state_r;
 //volatile int sensor_state_l;
+
+volatile int jumpmode = JUMPMODE_JUMP;
 
 int main(void);
 void int_imia0(void);
@@ -112,6 +120,8 @@ int main(void)
   global_state = STATE_WAIT_BLACK;
   motorspeed_r = 0;
   motorspeed_l = 0;
+  motordirection_r = 0;
+  motordirection_l = 0;
   int i;
 
   for(i = 0; i < SENSOR_BUFFER_SIZE ; i++){
@@ -139,46 +149,39 @@ int main(void)
 		lcd_printch('ｻ');
 */
 
-		/*
+  		lcd_cursor(0,0);
+		lcd_printch(global_state + '0');
+
   		lcd_cursor(1,0);
-
-		hex_lower = sensor_state_r; 
-		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
-		else lcd_printch(hex_lower + '0');
-
-  		lcd_cursor(2,1);
-
-		hex_lower = sensor_state_l; 
-		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
-		else lcd_printch(hex_lower + '0');
-		*/
+		if(jumpmode == JUMPMODE_JUMP){
+			lcd_printch('J');
+		}else if(jumpmode == JUMPMODE_TURNRIGHT){
+			lcd_printch('R');
+		}else if(jumpmode == JUMPMODE_TURNLEFT){
+			lcd_printch('L');
+		}
 
   		lcd_cursor(2,0);
-
 		hex_lower = P6DR%16;
 		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
 		else lcd_printch(hex_lower + '0');
 
   		lcd_cursor(3,0);
-
 		hex_upper = (sensor_r[sensor_r_dp]/16)%16;
 		if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
 		else lcd_printch(hex_upper + '0');
 
   		lcd_cursor(4,0);
-
 		hex_lower = sensor_r[sensor_r_dp]%16;
 		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
 		else lcd_printch(hex_lower + '0');
 
   		lcd_cursor(6,0);
-
 		hex_upper = (sensor_l[sensor_l_dp]/16)%16;
 		if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
 		else lcd_printch(hex_upper + '0');
 
   		lcd_cursor(7,0);
-
 		hex_lower = sensor_l[sensor_l_dp]%16;
 		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
 		else lcd_printch(hex_lower + '0');
@@ -193,38 +196,22 @@ int main(void)
 		lcd_printch(0xbb);
 		*/
 
-  		lcd_cursor(0,1);
-
-		hex_upper = (sensor_limit/16)%16;
-		if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
-		else lcd_printch(hex_upper + '0');
-
-  		lcd_cursor(1,1);
-
-		hex_lower = sensor_limit%16;
-		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
-		else lcd_printch(hex_lower + '0');
-
   		lcd_cursor(3,1);
-
 		hex_upper = (motorspeed_r/16)%16;
 		if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
 		else lcd_printch(hex_upper + '0');
 
   		lcd_cursor(4,1);
-
 		hex_lower = motorspeed_r%16;
 		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
 		else lcd_printch(hex_lower + '0');
 
   		lcd_cursor(6,1);
-
 		hex_upper = (motorspeed_l/16)%16;
 		if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
 		else lcd_printch(hex_upper + '0');
 
   		lcd_cursor(7,1);
-
 		hex_lower = motorspeed_l%16;
 		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
 		else lcd_printch(hex_lower + '0');
@@ -351,16 +338,26 @@ void pwm_proc(void)
 
   /* ここにPWM制御の中身を書く */
   if(pwm_count < motorspeed_r ){
-	PBDR |= RMOTOR_IN1;
-	PBDR &= ~RMOTOR_IN2;
+	if(motordirection_r == 0){
+		PBDR |= RMOTOR_IN1;
+		PBDR &= ~RMOTOR_IN2;
+	}else{
+		PBDR &= ~RMOTOR_IN1;
+		PBDR |= RMOTOR_IN2;
+  	}
   }else{
 	PBDR &= ~RMOTOR_IN1;
 	PBDR &= ~RMOTOR_IN2;
   }
 
   if(pwm_count < motorspeed_l){
-	PBDR |= LMOTOR_IN1;
-	PBDR &= ~LMOTOR_IN2;
+	if(motordirection_l == 0){
+		PBDR |= LMOTOR_IN1;
+		PBDR &= ~LMOTOR_IN2;
+	}else{
+		PBDR &= ~LMOTOR_IN1;
+		PBDR |= LMOTOR_IN2;
+	}
   }else{
 	PBDR &= ~LMOTOR_IN1;
 	PBDR &= ~LMOTOR_IN2;
@@ -376,7 +373,6 @@ void pwm_proc(void)
 
 #define SENSOR_BLACK 0
 #define SENSOR_WHITE 1
-
 
 
 
@@ -399,9 +395,14 @@ void control_proc(void)
 	volatile static char sensor_state_l[SENSOR_BUFFER_SIZE];
 	volatile static int sensor_state_l_dp = 0;
 
-	int kp = 1;
+	volatile static int jump = 0;
+
+
+	int kp = 8;
 
 	int lastline;
+
+	volatile static int stop = 0;
 
   /* ここに制御処理を書く */
 	
@@ -413,9 +414,6 @@ void control_proc(void)
 
 	sensor_l[sensor_l_dp] = ad_read(1)/2;
 	sensor_r[sensor_r_dp] = ad_read(2)/2;
-
-  		lcd_cursor(0,0);
-		lcd_printch(global_state + '0');
 
 	if(global_state == STATE_WAIT_BLACK){
 		if(key_read(1) == KEYPOSEDGE){
@@ -430,6 +428,20 @@ void control_proc(void)
 		sensor_limit = (sensor_limit_1 + sensor_limit_2)/2;
 		target = (sensor_limit + sensor_limit_2)/2;
 	}else{
+
+		if(key_read(1) == KEYPOSEDGE){
+			jumpmode++;
+			jumpmode%=3;
+		}
+
+		if(key_read(2) == KEYPOSEDGE){
+			stop++;
+			if(stop%2 == 1){
+				motorspeed_r = 0;
+				motorspeed_l = 0;
+				return;
+			}
+		}
 
 		sensor_state_r_dp++;
 		sensor_state_l_dp++;
@@ -454,6 +466,9 @@ void control_proc(void)
 			motorspeed_l = MOTOR_MAXSPEED;
 
 			spent=0;
+			jump=0;
+			motordirection_r = 0;
+			motordirection_l = 0;
 
 		}else if(sensor_state_r[sensor_state_r_dp] == SENSOR_WHITE && sensor_state_l[sensor_state_l_dp] == SENSOR_BLACK){
 
@@ -463,6 +478,10 @@ void control_proc(void)
 			motorspeed_l = MOTOR_MAXSPEED;
 
 			if(motorspeed_r < 0) motorspeed_r = 0;
+
+			jump=0;
+			motordirection_r = 0;
+			motordirection_l = 0;
 		}else if(sensor_state_r[sensor_state_r_dp] == SENSOR_BLACK && sensor_state_l[sensor_state_l_dp] == SENSOR_WHITE){
 
 			spent++;
@@ -472,51 +491,65 @@ void control_proc(void)
 
 			if(motorspeed_l < 0) motorspeed_l = 0;
 
+			jump=0;
+			motordirection_r = 0;
+			motordirection_l = 0;
+
 		}else if(sensor_state_r[sensor_state_r_dp] == SENSOR_BLACK && sensor_state_l[sensor_state_l_dp] == SENSOR_BLACK){
 			int i;
 			int dp;
 			int whitecount = 0;
-			for(i=0; i < 5 ; i++){
+			int blackcount = 0;
+			for(i=0; i < 10 ; i++){
 				dp=sensor_r_dp - i;
 				if(dp < 0) dp += SENSOR_BUFFER_SIZE;
 
-				//if(sensor_state_r[dp] == WHITE) whitecount++;
+				if(sensor_state_r[dp] == SENSOR_WHITE && sensor_state_l[dp] == SENSOR_WHITE) whitecount++;
+				if(sensor_state_r[dp] == SENSOR_BLACK && sensor_state_l[dp] == SENSOR_BLACK) blackcount++;
 			}
 
-			if( sensor_state_r[(sensor_state_r_dp-1+SENSOR_BUFFER_SIZE)%SENSOR_BUFFER_SIZE] == SENSOR_WHITE && 
-			    sensor_state_l[(sensor_state_l_dp-1+SENSOR_BUFFER_SIZE)%SENSOR_BUFFER_SIZE] == SENSOR_BLACK ){
+			if( whitecount > 3 || jump == 1){ // jump or turn
+				jump = 1;
 
-				spent++;
+				if(jumpmode == JUMPMODE_JUMP){
+					motorspeed_r = MOTOR_MAXSPEED;
+					motorspeed_l = MOTOR_MAXSPEED;
+				}else if(jumpmode == JUMPMODE_TURNRIGHT){
+					motorspeed_r = MOTOR_MAXSPEED;
+					motorspeed_l = MOTOR_MAXSPEED;
+					motordirection_r = 1;
+				}else if(jumpmode == JUMPMODE_TURNLEFT){
+					motorspeed_r = MOTOR_MAXSPEED;
+					motorspeed_l = MOTOR_MAXSPEED;
+					motordirection_l = 1;
+				}
+			}else{ // fix control
 
-				motorspeed_r = MOTOR_MAXSPEED-(spent*kp);
-				motorspeed_l = MOTOR_MAXSPEED;
+				if( sensor_state_r[(sensor_state_r_dp-1+SENSOR_BUFFER_SIZE)%SENSOR_BUFFER_SIZE] == SENSOR_WHITE && 
+					sensor_state_l[(sensor_state_l_dp-1+SENSOR_BUFFER_SIZE)%SENSOR_BUFFER_SIZE] == SENSOR_BLACK ){
 
-				sensor_state_r[sensor_state_r_dp] = sensor_state_r[sensor_state_r_dp-1];
-				sensor_state_l[sensor_state_l_dp] = sensor_state_l[sensor_state_l_dp-1];
+					spent++;
+
+					motorspeed_r = MOTOR_MAXSPEED-(spent*kp);
+					motorspeed_l = MOTOR_MAXSPEED;
+
+					sensor_state_r[sensor_state_r_dp] = SENSOR_WHITE;
+					sensor_state_l[sensor_state_l_dp] = SENSOR_BLACK;
 
 
-			} else if( sensor_state_r[(sensor_state_r_dp-1+SENSOR_BUFFER_SIZE)%SENSOR_BUFFER_SIZE] == SENSOR_BLACK && 
-			           sensor_state_l[(sensor_state_l_dp-1+SENSOR_BUFFER_SIZE)%SENSOR_BUFFER_SIZE] == SENSOR_WHITE ){
+				} else if( sensor_state_r[(sensor_state_r_dp-1+SENSOR_BUFFER_SIZE)%SENSOR_BUFFER_SIZE] == SENSOR_BLACK && 
+						   sensor_state_l[(sensor_state_l_dp-1+SENSOR_BUFFER_SIZE)%SENSOR_BUFFER_SIZE] == SENSOR_WHITE ){
 
-				spent++;
-				motorspeed_r = MOTOR_MAXSPEED;
-				motorspeed_l = MOTOR_MAXSPEED-(spent*kp);
+					spent++;
+					motorspeed_r = MOTOR_MAXSPEED;
+					motorspeed_l = MOTOR_MAXSPEED-(spent*kp);
 
-				sensor_state_r[sensor_state_r_dp] = sensor_state_r[sensor_state_r_dp-1];
-				sensor_state_l[sensor_state_l_dp] = sensor_state_l[sensor_state_l_dp-1];
-
-			}else if(sensor_state_r[sensor_state_r_dp-1] == SENSOR_BLACK && sensor_state_l[sensor_state_l_dp-1] == SENSOR_BLACK){
-
-				motorspeed_r = 0;
-				motorspeed_l = 0;
-
-			}else if(sensor_state_r[sensor_state_r_dp-1] == SENSOR_WHITE && sensor_state_l[sensor_state_l_dp-1] == SENSOR_WHITE){
-				motorspeed_r = 0;
-				motorspeed_l = 0;
+					sensor_state_r[sensor_state_r_dp] = SENSOR_BLACK;
+					sensor_state_l[sensor_state_l_dp] = SENSOR_WHITE;
+				}
 			}
 		}
 
 	}
-
 
 }
