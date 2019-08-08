@@ -1,7 +1,7 @@
 #include "h8-3069-iodef.h"
 
 #define KEYBUFSIZE 10  /* キーバッファの大きさ */
-#define KEYCHKCOUNT 3  /* キーの連続状態を調べるバッファ上の長さ　 */
+#define KEYCHKCOUNT 5  /* キーの連続状態を調べるバッファ上の長さ　 */
                          /* ↑キーバッファの大きさよりも小さくすること */
                          /*   余裕が少ないと正しく読めないことがある */
 #define KEYROWNUM  1   /* キー配列の列数(縦に並んでいる個数) */
@@ -40,8 +40,8 @@ void key_init(void)
 {
   int i,j;
 
-  //PADR = 0x0f;       /* PA0-3 は0アクティブ, PA4-6 は1アクティブ */
-  //PADDR = 0x7f;      /* PA0-3 はキーボードマトリクスの出力用 */
+  PADR = 0x0f;       /* PA0-3 は0アクティブ, PA4-6 は1アクティブ */
+  PADDR = 0x7f;      /* PA0-3 はキーボードマトリクスの出力用 */
                      /* PA4-6 はLCD制御(E,R/W,RS)の出力用 */
   P6DDR = 0;         /* P60-2 はキーボードマトリクスの入力用 */
                      /* P63-6 はCPUのバス制御として固定(モード6の時) */
@@ -71,9 +71,9 @@ void key_sense(void)
   if (keybufdp >= KEYBUFSIZE) keybufdp = 0;
   /* キースキャン */
   for(row = 0; row < KEYROWNUM; row++){ /* 列ごとにスキャン */
-    //r = ~(1 << row) & 0x0f;  /* スキャンする列のビットだけ 0 にする */
-    //r = r | (PADR & 0x70);   /*  LCD の制御に影響しないための対策 */
-    //PADR = r;                /*  キーデータの読み込み (0:ON, 1:OFF) */
+    r = ~(1 << row) & 0x0f;  /* スキャンする列のビットだけ 0 にする */
+    r = r | (PADR & 0x70);   /*  LCD の制御に影響しないための対策 */
+    PADR = r;                /*  キーデータの読み込み (0:ON, 1:OFF) */
     keybuf[keybufdp][row] = P6DR & 0x03; /* キーバッファに格納 */
   }
 }

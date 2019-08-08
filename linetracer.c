@@ -94,10 +94,10 @@ volatile int jumpmode = JUMPMODE_JUMP;
 #define MENU_SETBLACK       4
 #define MENU_SETSTOP        5
 
-volatile int menumode = MENU_SETBLACK;
+volatile int menumode = MENU_SETSTOP;
 
-	volatile static int sensor_limit_1;
-	volatile static int sensor_limit_2;
+volatile static int sensor_limit_1 = 0x6c;
+volatile static int sensor_limit_2 = 0x57;
 
 volatile int target;
 	int kp = 8;
@@ -132,7 +132,7 @@ int main(void)
   timer_set(0,TIMER0); /* タイマ0の時間間隔をセット */
   timer_start(0);      /* タイマ0スタート */
   ENINT();             /* 全割り込み受付可 */
-  global_state = STATE_STOP;
+  global_state = STATE_LINETRACE;
   motorspeed_r = 0;
   motorspeed_l = 0;
   motordirection_r = 0;
@@ -477,9 +477,6 @@ void pwm_proc(void)
 #define SENSOR_BLACK 0
 #define SENSOR_WHITE 1
 
-
-
-
 volatile int sum;
 
 volatile int spent;
@@ -511,7 +508,7 @@ void control_proc(void)
 	sensor_r[sensor_r_dp] = ad_read(2)/2;
 
 
-	if(global_state == STATE_LINETRACE){
+	if(global_state == STATE_LINETRACE || 1){
 
 		sensor_state_r_dp++;
 		sensor_state_l_dp++;
