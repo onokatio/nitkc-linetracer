@@ -161,11 +161,6 @@ int main(void)
 			lcd_printch('L');
 		}
 
-  		lcd_cursor(2,0);
-		hex_lower = P6DR%16;
-		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
-		else lcd_printch(hex_lower + '0');
-
   		lcd_cursor(3,0);
 		hex_upper = (sensor_r[sensor_r_dp]/16)%16;
 		if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
@@ -195,6 +190,16 @@ int main(void)
   		lcd_cursor(2,1);
 		lcd_printch(0xbb);
 		*/
+
+  		lcd_cursor(0,1);
+		hex_upper = (P6DR/16)%16;
+		if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
+		else lcd_printch(hex_upper + '0');
+
+  		lcd_cursor(1,1);
+		hex_lower = P6DR%16;
+		if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
+		else lcd_printch(hex_lower + '0');
 
   		lcd_cursor(3,1);
 		hex_upper = (motorspeed_r/16)%16;
