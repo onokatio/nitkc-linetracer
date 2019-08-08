@@ -33,7 +33,7 @@
 
 /* A/D変換関連 */
 /* A/D変換のチャネル数とバッファサイズ */
-#define ADCHNUM   4
+#define ADCHNUM   3
 #define ADBUFSIZE 8
 /* 平均化するときのデータ個数 */
 #define ADAVRNUM 4
@@ -76,8 +76,8 @@ volatile int motorspeed_l;
 volatile int motordirection_r;
 volatile int motordirection_l;
 
-#define STATE_LINETRACE   2
-#define STATE_STOP   3
+#define STATE_LINETRACE   0
+#define STATE_STOP        1
 
 volatile int sensor_limit;
 
@@ -94,7 +94,7 @@ volatile int jumpmode = JUMPMODE_JUMP;
 #define MENU_SETBLACK       4
 #define MENU_SETSTOP        5
 
-volatile int menumode = MENU_SETKP;
+volatile int menumode = MENU_SETBLACK;
 
 	volatile static int sensor_limit_1;
 	volatile static int sensor_limit_2;
@@ -158,39 +158,108 @@ int main(void)
 		if(key_read(1) == KEYPOSEDGE){
 			menumode++;
 			menumode%=6;
+			lcd_clear();
 		}
+		/*
+			lcd_cursor(5,1);
+			hex_lower = P6DR%16;
+			if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
+			else lcd_printch(hex_lower + '0');
+			*/
 
 		if(menumode == MENU_SETKP){
 			lcd_cursor(0, 0);
 			lcd_printstr("SET KP");
+			lcd_cursor(0, 1);
+			lcd_printstr("KP=");
+			lcd_cursor(3, 1);
+			lcd_printch('0' + kp);
 			if(key_read(2) == KEYPOSEDGE){
 				kp++;
 				kp%=10;
 			}
-		}else if(menumode == MENU_SETWHITE){
+		}else if(menumode == MENU_SETBLACK){
+			lcd_cursor(0, 0);
+			lcd_printstr("SETBLACK");
+
+			lcd_cursor(0,1);
+			hex_upper = (sensor_limit_1/16)%16;
+			if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
+			else lcd_printch(hex_upper + '0');
+
+			lcd_cursor(1,1);
+			hex_lower = sensor_limit_1%16;
+			if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
+			else lcd_printch(hex_lower + '0');
+
+			lcd_cursor(3,1);
+			hex_upper = (sensor_r[sensor_r_dp]/16)%16;
+			if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
+			else lcd_printch(hex_upper + '0');
+
+			lcd_cursor(4,1);
+			hex_lower = sensor_r[sensor_r_dp]%16;
+			if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
+			else lcd_printch(hex_lower + '0');
+
+			lcd_cursor(6,1);
+			hex_upper = (sensor_l[sensor_l_dp]/16)%16;
+			if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
+			else lcd_printch(hex_upper + '0');
+
+			lcd_cursor(7,1);
+			hex_lower = sensor_l[sensor_l_dp]%16;
+			if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
+			else lcd_printch(hex_lower + '0');
+
 			if(key_read(2) == KEYPOSEDGE){
 				sensor_limit_1 = (sensor_r[sensor_r_dp] + sensor_l[sensor_l_dp])/2;
 			}
-		}else if(menumode == MENU_SETBLACK){
+		}else if(menumode == MENU_SETWHITE){
+			lcd_cursor(0, 0);
+			lcd_printstr("SETWHITE&A");
+
+			lcd_cursor(0,1);
+			hex_upper = (sensor_limit_2/16)%16;
+			if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
+			else lcd_printch(hex_upper + '0');
+
+			lcd_cursor(1,1);
+			hex_lower = sensor_limit_2%16;
+			if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
+			else lcd_printch(hex_lower + '0');
+
+			lcd_cursor(3,1);
+			hex_upper = (sensor_r[sensor_r_dp]/16)%16;
+			if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
+			else lcd_printch(hex_upper + '0');
+
+			lcd_cursor(4,1);
+			hex_lower = sensor_r[sensor_r_dp]%16;
+			if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
+			else lcd_printch(hex_lower + '0');
+
+			lcd_cursor(6,1);
+			hex_upper = (sensor_l[sensor_l_dp]/16)%16;
+			if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
+			else lcd_printch(hex_upper + '0');
+
+			lcd_cursor(7,1);
+			hex_lower = sensor_l[sensor_l_dp]%16;
+			if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
+			else lcd_printch(hex_lower + '0');
+
 			if(key_read(2) == KEYPOSEDGE){
 				sensor_limit_2 = (sensor_r[sensor_r_dp] + sensor_l[sensor_l_dp])/2;
 				sensor_limit = (sensor_limit_1 + sensor_limit_2)/2;
 				target = (sensor_limit + sensor_limit_2)/2;
 			}
 		}else if(menumode == MENU_SETJUMPMODE){
-			if(key_read(2) == KEYPOSEDGE){
-				jumpmode++;
-				jumpmode%=3;
-			}
-		}else if(menumode == MENU_SETSTOP){
-			if(key_read(2) == KEYPOSEDGE){
-				global_state = STATE_STOP;
-			}
-		}else{
-			lcd_cursor(0,0);
-			lcd_printch(global_state + '0');
-
-			lcd_cursor(1,0);
+			lcd_cursor(0, 0);
+			lcd_printstr("SET JUMP");
+			lcd_cursor(0, 1);
+			lcd_printstr("MODE=");
+			lcd_cursor(5, 1);
 			if(jumpmode == JUMPMODE_JUMP){
 				lcd_printch('J');
 			}else if(jumpmode == JUMPMODE_TURNRIGHT){
@@ -198,37 +267,36 @@ int main(void)
 			}else if(jumpmode == JUMPMODE_TURNLEFT){
 				lcd_printch('L');
 			}
+			if(key_read(2) == KEYPOSEDGE){
+				jumpmode++;
+				jumpmode%=3;
+			}
+		}else if(menumode == MENU_SETSTOP){
+			lcd_cursor(0, 0);
+			lcd_printstr("SET STOP");
+			lcd_cursor(0, 1);
+			lcd_printstr("MODE=");
+			lcd_cursor(5, 1);
+			if(global_state == STATE_STOP){
+				lcd_printstr("STOP");
+			}else if(global_state == STATE_LINETRACE){
+				lcd_printstr("LINETRACE");
+			}
+			if(key_read(2) == KEYPOSEDGE){
+				global_state++;
+				global_state%=2;
+			}
+		}else{
+			lcd_cursor(0,0);
+			lcd_printch(global_state + '0');
 
-			lcd_cursor(3,0);
-			hex_upper = (sensor_r[sensor_r_dp]/16)%16;
-			if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
-			else lcd_printch(hex_upper + '0');
+			lcd_cursor(1,0);
 
-			lcd_cursor(4,0);
-			hex_lower = sensor_r[sensor_r_dp]%16;
-			if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
-			else lcd_printch(hex_lower + '0');
+			/*
+			*/
 
-			lcd_cursor(6,0);
-			hex_upper = (sensor_l[sensor_l_dp]/16)%16;
-			if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
-			else lcd_printch(hex_upper + '0');
 
-			lcd_cursor(7,0);
-			hex_lower = sensor_l[sensor_l_dp]%16;
-			if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
-			else lcd_printch(hex_lower + '0');
-
-			lcd_cursor(0,1);
-			hex_upper = (P6DR/16)%16;
-			if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
-			else lcd_printch(hex_upper + '0');
-
-			lcd_cursor(1,1);
-			hex_lower = P6DR%16;
-			if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
-			else lcd_printch(hex_lower + '0');
-
+			/*
 			lcd_cursor(3,1);
 			hex_upper = (motorspeed_r/16)%16;
 			if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
@@ -248,6 +316,7 @@ int main(void)
 			hex_lower = motorspeed_l%16;
 			if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
 			else lcd_printch(hex_lower + '0');
+			*/
 		}
 	  }
 
@@ -430,8 +499,6 @@ void control_proc(void)
 
 
 
-	int lastline;
-
   /* ここに制御処理を書く */
 	
 	sensor_r_dp++;
@@ -444,7 +511,7 @@ void control_proc(void)
 	sensor_r[sensor_r_dp] = ad_read(2)/2;
 
 
-	if(global_state == STATE_WAIT_BLACK){
+	if(global_state == STATE_LINETRACE){
 
 		sensor_state_r_dp++;
 		sensor_state_l_dp++;
