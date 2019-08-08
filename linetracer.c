@@ -59,8 +59,8 @@ volatile static int sensor_l_dp = 0;
 
 /* LCD関係 */
 volatile int disp_flag;
-volatile char lcd_str_upper[LCDDISPSIZE+1];
-volatile char lcd_str_lower[LCDDISPSIZE+1];
+//volatile char lcd_str_upper[LCDDISPSIZE+1];
+//volatile char lcd_str_lower[LCDDISPSIZE+1];
 
 /* モータ制御関係 */
 volatile int pwm_count;
@@ -76,8 +76,8 @@ volatile int motorspeed_l;
 volatile int motordirection_r;
 volatile int motordirection_l;
 
-#define STATE_LINETRACE   0
-#define STATE_STOP        1
+#define STATE_STOP        0
+#define STATE_LINETRACE   1
 
 volatile int sensor_limit;
 
@@ -101,6 +101,11 @@ volatile static int sensor_limit_2 = 0x57;
 
 volatile int target;
 volatile int kp = 8;
+
+volatile static char sensor_state_r[SENSOR_BUFFER_SIZE];
+volatile static int sensor_state_r_dp = 0;
+volatile static char sensor_state_l[SENSOR_BUFFER_SIZE];
+volatile static int sensor_state_l_dp = 0;
 
 int main(void);
 void int_imia0(void);
@@ -275,12 +280,12 @@ int main(void)
 			lcd_cursor(0, 0);
 			lcd_printstr("SET STOP");
 			lcd_cursor(0, 1);
-			lcd_printstr("MODE=");
-			lcd_cursor(5, 1);
 			if(global_state == STATE_STOP){
 				lcd_printstr("STOP");
+				lcd_printch('0' + global_state);
 			}else if(global_state == STATE_LINETRACE){
-				lcd_printstr("LINETRACE");
+				lcd_printstr("LINE");
+				lcd_printch('0' + global_state);
 			}
 
 			if(key_read(2) == KEYPOSEDGE){
@@ -293,7 +298,6 @@ int main(void)
 
 			lcd_cursor(1,0);
 
-			/*
 			lcd_cursor(3,1);
 			hex_upper = (sensor_state_r[sensor_state_r_dp] /16)%16;
 			if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
@@ -313,7 +317,6 @@ int main(void)
 			hex_lower = sensor_state_l[sensor_state_l_dp] %16;
 			if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
 			else lcd_printch(hex_lower + '0');
-			*/
 
 
 			lcd_cursor(3,1);
@@ -508,10 +511,6 @@ void control_proc(void)
 
 	volatile static int jump = 0;
 
-	volatile static char sensor_state_r[SENSOR_BUFFER_SIZE];
-	volatile static int sensor_state_r_dp = 0;
-	volatile static char sensor_state_l[SENSOR_BUFFER_SIZE];
-	volatile static int sensor_state_l_dp = 0;
 
 
   /* ここに制御処理を書く */
@@ -526,7 +525,6 @@ void control_proc(void)
 	sensor_r[sensor_r_dp] = ad_read(2)/2;
 
 
-	if(global_state == STATE_LINETRACE){
 
 		sensor_state_r_dp++;
 		sensor_state_l_dp++;
@@ -546,6 +544,7 @@ void control_proc(void)
 			sensor_state_l[sensor_state_l_dp] = SENSOR_WHITE;
 		}
 
+	if(global_state == STATE_LINETRACE){
 		if(sensor_state_r[sensor_state_r_dp] == SENSOR_WHITE && sensor_state_l[sensor_state_l_dp] == SENSOR_WHITE ){
 			motorspeed_r = MOTOR_MAXSPEED;
 			motorspeed_l = MOTOR_MAXSPEED;
@@ -593,7 +592,7 @@ void control_proc(void)
 				if(sensor_state_r[dp] == SENSOR_BLACK && sensor_state_l[dp] == SENSOR_BLACK) blackcount++;
 			}
 
-			if( whitecount > 3 || jump == 1){ // jump or turn
+			if( whitecount > 5 || jump == 1){ // jump or turn
 				jump = 1;
 
 				if(jumpmode == JUMPMODE_JUMP){
