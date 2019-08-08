@@ -87,12 +87,12 @@ volatile int sensor_limit;
 volatile int jumpmode = JUMPMODE_JUMP;
 
 
-#define MENU_STATUS         0
-#define MENU_SETKP          1
-#define MENU_SETJUMPMODE    2
-#define MENU_SETWHITE       3
-#define MENU_SETBLACK       4
-#define MENU_SETSTOP        5
+#define MENU_SETKP          0
+#define MENU_SETBLACK       1
+#define MENU_SETWHITE       2
+#define MENU_SETJUMPMODE    3
+#define MENU_SETSTOP        4
+#define MENU_STATUS         5
 
 volatile int menumode = MENU_SETSTOP;
 
@@ -100,7 +100,7 @@ volatile static int sensor_limit_1 = 0x6c;
 volatile static int sensor_limit_2 = 0x57;
 
 volatile int target;
-	int kp = 8;
+volatile int kp = 8;
 
 int main(void);
 void int_imia0(void);
@@ -132,7 +132,7 @@ int main(void)
   timer_set(0,TIMER0); /* タイマ0の時間間隔をセット */
   timer_start(0);      /* タイマ0スタート */
   ENINT();             /* 全割り込み受付可 */
-  global_state = STATE_LINETRACE;
+  global_state = STATE_STOP;
   motorspeed_r = 0;
   motorspeed_l = 0;
   motordirection_r = 0;
@@ -282,6 +282,7 @@ int main(void)
 			}else if(global_state == STATE_LINETRACE){
 				lcd_printstr("LINETRACE");
 			}
+
 			if(key_read(2) == KEYPOSEDGE){
 				global_state++;
 				global_state%=2;
@@ -293,10 +294,28 @@ int main(void)
 			lcd_cursor(1,0);
 
 			/*
+			lcd_cursor(3,1);
+			hex_upper = (sensor_state_r[sensor_state_r_dp] /16)%16;
+			if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
+			else lcd_printch(hex_upper + '0');
+
+			lcd_cursor(4,1);
+			hex_lower = sensor_state_r[sensor_state_r_dp] %16;
+			if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
+			else lcd_printch(hex_lower + '0');
+
+			lcd_cursor(6,1);
+			hex_upper = (sensor_state_l[sensor_state_l_dp] /16)%16;
+			if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
+			else lcd_printch(hex_upper + '0');
+
+			lcd_cursor(7,1);
+			hex_lower = sensor_state_l[sensor_state_l_dp] %16;
+			if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
+			else lcd_printch(hex_lower + '0');
 			*/
 
 
-			/*
 			lcd_cursor(3,1);
 			hex_upper = (motorspeed_r/16)%16;
 			if(hex_upper > 9) lcd_printch(hex_upper - 10 + 'a');
@@ -316,7 +335,6 @@ int main(void)
 			hex_lower = motorspeed_l%16;
 			if(hex_lower > 9) lcd_printch(hex_lower - 10 + 'a');
 			else lcd_printch(hex_lower + '0');
-			*/
 		}
 	  }
 
@@ -487,13 +505,13 @@ void control_proc(void)
 {
 
 
+
+	volatile static int jump = 0;
+
 	volatile static char sensor_state_r[SENSOR_BUFFER_SIZE];
 	volatile static int sensor_state_r_dp = 0;
 	volatile static char sensor_state_l[SENSOR_BUFFER_SIZE];
 	volatile static int sensor_state_l_dp = 0;
-
-	volatile static int jump = 0;
-
 
 
   /* ここに制御処理を書く */
@@ -508,7 +526,7 @@ void control_proc(void)
 	sensor_r[sensor_r_dp] = ad_read(2)/2;
 
 
-	if(global_state == STATE_LINETRACE || 1){
+	if(global_state == STATE_LINETRACE){
 
 		sensor_state_r_dp++;
 		sensor_state_l_dp++;

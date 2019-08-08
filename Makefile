@@ -100,7 +100,7 @@ INCLUDES = -I./
 #	-mint32：int型変数のビット数指定
 #	-O2：gccの最適化レベルの指定
 #	-Wall：コンパイル時の警告メッセージの選択(全て)
-CFLAGS = -mh -mrelax -mint32 -O3 $(INCLUDES) -Wall
+CFLAGS = -mh -mrelax -mint32 -O2 $(INCLUDES) -Wall
 
 #
 # 指定に合わせたスタートアップルーチンとリンカスクリプトの選択
